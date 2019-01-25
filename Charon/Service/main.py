@@ -1,8 +1,6 @@
-
 import os
 import logging
 
-import dbus.service
 import dbus.mainloop.glib
 from typing import Dict, Any
 from gi.repository import GLib

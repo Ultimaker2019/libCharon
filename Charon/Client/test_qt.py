@@ -1,6 +1,6 @@
 import sys
 
-from PyQt5.QtCore import QCoreApplication, QTimer
+from PyQt5.QtCore import QCoreApplication
 
 import Charon.Client
 

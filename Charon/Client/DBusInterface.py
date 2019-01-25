@@ -98,7 +98,7 @@ class DBusInterface:
 
         if cls.__use_qt:
             assert cls.__signal_forwarder is not None
-            
+
             message = QDBusMessage.createMethodCall(service_path, object_path, interface, method_name)
             message.setArguments(args)
             cls.__signal_forwarder.asyncCall(message, success_callback, error_callback)
@@ -117,16 +117,15 @@ class DBusInterface:
     #   \param object_path The object path of the service to call the method on.
     #   \param interface The interface name of the method to call.
     @classmethod
-    def connectSignal(cls, signal_name: str, callback: Callable[..., None], *, service_path: str = DefaultServicePath, object_path: str = DefaultObjectPath, interface: str = DefaultInterface) -> bool:
+    def connectSignal(cls, signal_name: str, callback: Callable[..., None], *, service_path: str = DefaultServicePath, object_path: str = DefaultObjectPath, interface: str = DefaultInterface):
         cls.__ensureDBusSetup()
 
         if cls.__use_qt:
             assert cls.__signal_forwarder is not None
-            return cls.__signal_forwarder.addConnection(service_path, object_path, interface, signal_name, callback)
+            cls.__signal_forwarder.addConnection(service_path, object_path, interface, signal_name, callback)
         else:
             assert cls.__connection is not None
             cls.__connection.add_signal_receiver(callback, signal_name, interface, service_path, object_path)
-            return True
 
     ##  Disconnect from a DBus signal connection.
     #
@@ -140,16 +139,15 @@ class DBusInterface:
     #   \param object_path The object path of the service to call the method on.
     #   \param interface The interface name of the method to call.
     @classmethod
-    def disconnectSignal(cls, signal_name: str, callback: Callable[..., None], *, service_path: str = DefaultServicePath, object_path: str = DefaultObjectPath, interface: str = DefaultInterface) -> bool:
+    def disconnectSignal(cls, signal_name: str, callback: Callable[..., None], *, service_path: str = DefaultServicePath, object_path: str = DefaultObjectPath, interface: str = DefaultInterface):
         cls.__ensureDBusSetup()
 
         if cls.__use_qt:
             assert cls.__signal_forwarder is not None
-            return cls.__signal_forwarder.removeConnection(service_path, object_path, interface, signal_name, callback)
+            cls.__signal_forwarder.removeConnection(service_path, object_path, interface, signal_name, callback)
         else:
             assert cls.__connection is not None
             cls.__connection.remove_signal_receiver(callback, signal_name, interface, service_path, object_path)
-            return True
 
     # Private method to ensure we have a DBus connection.
     @classmethod
@@ -174,8 +172,9 @@ class DBusInterface:
             cls.__connection = dbus.SystemBus(private=True, mainloop=dbus.mainloop.glib.DBusGMainLoop())
 
     __use_qt = False
-    __connection = None # type: Optional[Union[dbus.SystemBus]]
-    __signal_forwarder = None # type: Optional[DBusSignalForwarder]
+    __connection = None         # type: Optional[Union[dbus.SystemBus]]
+    __signal_forwarder = None   # type: Optional[DBusSignalForwarder]
+
 
 if _has_qt:
     ##  Helper class to handle QtDBus signal connections.

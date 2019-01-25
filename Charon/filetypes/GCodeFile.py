@@ -38,8 +38,7 @@ class GCodeFile(FileInterface):
     @staticmethod
     def parseHeader(stream: IO[bytes], *, prefix: str = "") -> Dict[str, Any]:
         try:
-            metadata = {} # type: Dict[str, Any]
-            line_number = 0
+            metadata = {}   # type: Dict[str, Any]
             for line_number, bytes_line in enumerate(stream):
                 if line_number > GCodeFile.MaximumHeaderLength:
                     break
@@ -62,7 +61,7 @@ class GCodeFile(FileInterface):
                         pass
                     key_elements = key.split(".")
                     GCodeFile.__insertKeyValuePair(metadata, key_elements, value)
-            
+
             if stream.seekable():
                 stream.seek(0)
 
@@ -85,8 +84,7 @@ class GCodeFile(FileInterface):
 
             return metadata
         except Exception as e:
-            raise InvalidHeaderException("Unable to parse the header. An exception occured; %s" % e)
-
+            raise InvalidHeaderException("Unable to parse the header. An exception occurred; %s" % e)
 
     ## Add a key-value pair to the metadata dictionary.
     # Splits up key each element to it's own dictionary.
@@ -94,9 +92,9 @@ class GCodeFile(FileInterface):
     # @param key_elements List of separate key name elements
     # @param value Key value
     @staticmethod
-    def __insertKeyValuePair(metadata: Dict["str", Any], key_elements: Union[str,List[str]], value: Any) -> Any:
+    def __insertKeyValuePair(metadata: Dict["str", Any], key_elements: Union[str, List[str]], value: Any) -> Any:
         if not key_elements:
-            return value 
+            return value
 
         sub_dict = {}
 
@@ -104,8 +102,8 @@ class GCodeFile(FileInterface):
             sub_dict = metadata[key_elements[0]]
 
         metadata[key_elements[0]] = GCodeFile.__insertKeyValuePair(sub_dict, key_elements[1:], value)
-       
-        return metadata    
+
+        return metadata
 
     def getData(self, virtual_path: str) -> Dict[str, Any]:
         assert self.__stream is not None
@@ -118,7 +116,7 @@ class GCodeFile(FileInterface):
             return result
 
         if virtual_path == "/toolpath" or virtual_path == "/toolpath/default":
-            return { virtual_path: self.__stream.read() }
+            return {virtual_path: self.__stream.read()}
 
         return {}
 
@@ -127,7 +125,7 @@ class GCodeFile(FileInterface):
     def __cleanGriffinHeader(metadata) -> None:
         metadata["machine_type"] = metadata["target_machine"]["name"]
         del metadata["target_machine"]
-    
+
         if GCodeFile.__isAvailable(metadata, ["time"]):
             GCodeFile.__insertKeyValuePair(metadata, ["print", "time"], metadata["time"])
             # del metadata["time"]  # We want to delete the old key, but it's behavior of how the code was.
@@ -135,7 +133,7 @@ class GCodeFile(FileInterface):
         GCodeFile.__insertKeyValuePair(metadata, ["print", "min_size"], metadata["print"]["size"]["min"])
         GCodeFile.__insertKeyValuePair(metadata, ["print", "max_size"], metadata["print"]["size"]["max"])
         del metadata["print"]["size"]
-        
+
         for key, value in metadata["extruder_train"].items():
             GCodeFile.__insertKeyValuePair(metadata, ["extruders", int(key)], value)
 
@@ -147,12 +145,12 @@ class GCodeFile(FileInterface):
     #             must exist on the location of that key element
     # @return True if the key is available and not empty
     @staticmethod
-    def __isAvailable(metadata, keys) -> None:
+    def __isAvailable(metadata, keys) -> bool:
         if not keys:
             return True
 
         key = keys[0]
-        
+
         if isinstance(key, list):
             key_is_valid = True
             for sub_key in key:
@@ -162,7 +160,7 @@ class GCodeFile(FileInterface):
             key_is_valid = key_is_valid and GCodeFile.__isAvailable(metadata[key], keys[1:])
 
         return key_is_valid
-    
+
     ## Validates a parsed GRIFFIN flavoured GCODE header.
     # Will raise an exception when the header is invalid.
     # @param metadata Key/value dictionary based on the header.
@@ -170,31 +168,29 @@ class GCodeFile(FileInterface):
     def __validateGriffinHeader(metadata) -> None:
 
         # Validate target settings
-        if not GCodeFile.__isAvailable(metadata, ["target_machine", "name"]): 
+        if not GCodeFile.__isAvailable(metadata, ["target_machine", "name"]):
             raise InvalidHeaderException("TARGET_MACHINE.NAME must be set")
 
         # Validate generator settings
-        if not GCodeFile.__isAvailable(metadata, ["generator", "name"]): 
+        if not GCodeFile.__isAvailable(metadata, ["generator", "name"]):
             raise InvalidHeaderException("GENERATOR.NAME must be set")
-        if not GCodeFile.__isAvailable(metadata, ["generator", "version"]): 
+        if not GCodeFile.__isAvailable(metadata, ["generator", "version"]):
             raise InvalidHeaderException("GENERATOR.VERSION must be set")
-        if not GCodeFile.__isAvailable(metadata, ["generator", "build_date"]): 
+        if not GCodeFile.__isAvailable(metadata, ["generator", "build_date"]):
             raise InvalidHeaderException("GENERATOR.BUILD_DATE must be set")
 
-        # Validate build plate temperature 
+        # Validate build plate temperature
         if not GCodeFile.__isAvailable(metadata, ["build_plate", "initial_temperature"]) or \
-            not isAPositiveNumber(metadata["build_plate"]["initial_temperature"]):
+                not isAPositiveNumber(metadata["build_plate"]["initial_temperature"]):
             raise InvalidHeaderException("BUILD_PLATE.INITIAL_TEMPERATURE must be set and be a positive real")
-      
-        # Validate dimensions 
+
+        # Validate dimensions
         if not GCodeFile.__isAvailable(metadata, ["print", "size", "min", ["x", "y", "z"]]):
             raise InvalidHeaderException("PRINT.SIZE.MIN.[x,y,z] must be set. Ensure all three are defined.")
         if not GCodeFile.__isAvailable(metadata, ["print", "size", "max", ["x", "y", "z"]]):
             raise InvalidHeaderException("PRINT.SIZE.MAX.[x,y,z] must be set. Ensure all three are defined.")
-        
-        # Validate print time
-        print_time = -1
 
+        # Validate print time
         if GCodeFile.__isAvailable(metadata, ["print", "time"]):
             print_time = int(metadata["print"]["time"])
         elif GCodeFile.__isAvailable(metadata, ["time"]):
@@ -204,30 +200,30 @@ class GCodeFile(FileInterface):
 
         if print_time < 0:
             raise InvalidHeaderException("Print Time should be a positive integer")
-       
+
         # Validate extruder train
         for index in range(0, 10):
             index_str = str(index)
             if GCodeFile.__isAvailable(metadata, ["extruder_train", index_str]):
 
                 if not GCodeFile.__isAvailable(metadata, ["extruder_train", index_str, "nozzle", "diameter"]) or \
-                    not isAPositiveNumber(metadata["extruder_train"][index_str]["nozzle"]["diameter"]):
-                        raise InvalidHeaderException(
-                            "extruder_train.{}.nozzle.diameter must be defined and be a positive real".format(index))
-       
+                        not isAPositiveNumber(metadata["extruder_train"][index_str]["nozzle"]["diameter"]):
+                    raise InvalidHeaderException(
+                        "extruder_train.{}.nozzle.diameter must be defined and be a positive real".format(index))
+
                 if not GCodeFile.__isAvailable(metadata, ["extruder_train", index_str, "material", "volume_used"]) or \
-                    not isAPositiveNumber(metadata["extruder_train"][index_str]["material"]["volume_used"]):
-                        raise InvalidHeaderException(
-                            "extruder_train.{}.material.volume_used must be defined and positive".format(index))
+                        not isAPositiveNumber(metadata["extruder_train"][index_str]["material"]["volume_used"]):
+                    raise InvalidHeaderException(
+                        "extruder_train.{}.material.volume_used must be defined and positive".format(index))
 
                 if not GCodeFile.__isAvailable(metadata, ["extruder_train", index_str, "initial_temperature"]) or \
-                    not isAPositiveNumber(metadata["extruder_train"][index_str]["initial_temperature"]):
-                        raise InvalidHeaderException(
-                            "extruder_train.{}.initial_temperature must be defined and positive".format(index))
+                        not isAPositiveNumber(metadata["extruder_train"][index_str]["initial_temperature"]):
+                    raise InvalidHeaderException(
+                        "extruder_train.{}.initial_temperature must be defined and positive".format(index))
 
     def getStream(self, virtual_path: str) -> IO[bytes]:
         assert self.__stream is not None
-        
+
         if virtual_path != "/toolpath" and virtual_path != "/toolpath/default":
             raise NotImplementedError("G-code files only support /toolpath as stream")
 
@@ -235,7 +231,7 @@ class GCodeFile(FileInterface):
 
     def close(self) -> None:
         assert self.__stream is not None
-        
+
         self.__stream.close()
 
 

@@ -5,6 +5,7 @@ import RequestQueue
 
 log = logging.getLogger(__name__)
 
+
 ##  The main interface for the Charon file service.
 #
 #   This contains the main interface definition for the Charon file service.
@@ -56,7 +57,7 @@ class FileService(dbus.service.Object):
     #   \param request_id The ID of the request to cancel.
     @dbus.decorators.method("nl.ultimaker.charon", "s", "")
     def cancelRequest(self, request_id):
-        log.debug("Cancel request {id}".format(request_id))
+        log.debug("Cancel request {id}".format(id=request_id))
         if self.__queue.dequeue(request_id):
             self.requestError(request_id, "Request canceled")
 

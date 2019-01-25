@@ -11,6 +11,7 @@ import Charon.OpenMode
 
 log = logging.getLogger(__name__)
 
+
 ##  A request for data that needs to be processed.
 #
 #   Each request will be processed by a worker thread to actually perform the data
@@ -47,7 +48,6 @@ class Request:
             for path in self.virtual_paths:
                 data = virtual_file.getData(path)
 
-
                 for key, value in data.items():
                     if isinstance(value, bytes):
                         data[key] = dbus.ByteArray(value)
@@ -61,7 +61,7 @@ class Request:
             virtual_file.close()
             self.file_service.requestCompleted(self.request_id)
         except Exception as e:
-            log.log(logging.DEBUG, "", exc_info = 1)
+            log.debug("", exc_info = 1)
             self.file_service.requestError(self.request_id, str(e))
 
     # Helper for dbus-python to convert a nested dict to a nested dict.
@@ -72,7 +72,7 @@ class Request:
         result = dbus.Dictionary({}, signature = "sv")
 
         for key, value in dictionary.items():
-            key = str(key) # Since we are sending a dict of str, Any, make sure the keys are strings.
+            key = str(key)  # Since we are sending a dict of str, Any, make sure the keys are strings.
             if isinstance(value, bytes):
                 # Workaround dbus-python being stupid and not realizing that a bytes object
                 # should be sent as byte array, not as string.
@@ -83,6 +83,7 @@ class Request:
                 result[key] = value
 
         return result
+
 
 ##  A queue of requests that need to be processed.
 #
@@ -110,7 +111,7 @@ class RequestQueue:
     #
     #   \return True if successful, False if the request could not be enqueued for some reason.
     def enqueue(self, request: Request):
-        if(request.request_id in self.__request_map):
+        if request.request_id in self.__request_map:
             log.debug("Tried to enqueue a request with ID {id} which is already in the queue".format(id = request.request_id))
             return False
 
@@ -155,8 +156,8 @@ class RequestQueue:
 
             try:
                 request.run()
-            except Exception as e:
-                log.log(logging.DEBUG, "Request caused an uncaught exception when running!", exc_info = 1)
+            except Exception:
+                log.debug("Request caused an uncaught exception when running!", exc_info = 1)
 
     __maximum_queue_size = 100
     __worker_count = 2

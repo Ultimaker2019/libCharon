@@ -1,6 +1,5 @@
 import sys
 
-import dbus
 import dbus.mainloop.glib
 from gi.repository import GLib
 
